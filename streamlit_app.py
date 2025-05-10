@@ -120,7 +120,7 @@ def agents_workflow(uploaded_file,topic):
             ),
             agent=reporting_analyst,
             output_file="Links.md",
-            tools=[search_tool,link_tool]
+            tools=[search_tool]
         )
 
         # Initialize and execute the Crew
