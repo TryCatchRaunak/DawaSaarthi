@@ -22,7 +22,6 @@ from crewai_tools import FileWriterTool
 import streamlit as st
 load_dotenv()
 search_tool = SerperDevTool()
-link_tool = FirecrawlSearchTool()
 
 
 model = genai.GenerativeModel('gemini-2.0-flash-001')
@@ -76,7 +75,7 @@ def agents_workflow(uploaded_file,topic):
             backstory=(
                "You're a seasoned researcher who goes out in the web to surf and find out the direct links to the medicines given and return them to the user for them to buy."
             ),
-            tools=[search_tool,link_tool],
+            tools=[search_tool,FirecrawlSearchTool()],
             verbose=True,
         )
 
