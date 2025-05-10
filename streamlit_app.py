@@ -35,7 +35,7 @@ with st.sidebar:
     generate_comparison = st.button("Generate Output", type="primary", use_container_width=True)
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded Image", use_container_width=True)
+        st.image(image, caption="Uploaded Image")
     medicines=st.text_area("Medicines To Be Searched", height=100)
     generate_comparison_manual=st.button("Generate Output Manually", type="primary", use_container_width=True)  
 
