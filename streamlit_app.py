@@ -179,10 +179,6 @@ def agents_workflow_manual(medicines):
 
 # Main App Layout
 st.title("DawaSaarthi")
-
-# Visitor tracking based on cookie
-st.markdown(f"Your session ID: {session_id}")
-
 # Enquiry Booth for uploading prescriptions and manual entry
 with st.sidebar:
     st.title("Enquiry Booth")
