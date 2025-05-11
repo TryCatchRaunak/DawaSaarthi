@@ -39,7 +39,7 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gspread"], 
 client = gspread.authorize(creds)
 
 # Access the Google Sheet
-sheet = client.open("DawaSaarthi_Visitors").sheet1
+sheet = client.open("Dawasaarthi_Visitors").sheet1
 
 # Example: Append new visitor
 import datetime
