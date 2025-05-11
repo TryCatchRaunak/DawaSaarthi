@@ -57,18 +57,17 @@ st.set_page_config(
 )
 
 
-
-
-# --- Accurate Visitor Tracking using Cookie (Place right after st.set_page_config) ---
 from streamlit_javascript import st_javascript
 import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# Setup Google Sheet
+# Setup Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gspread"], scope)
 client = gspread.authorize(creds)
+
+# Access the Google Sheet
 sheet = client.open("Dawasaarthi_Visitors").sheet1
 
 # JavaScript for persistent cookie-based visitor ID
@@ -81,7 +80,7 @@ js_code = """
   } else {
     const uuid = self.crypto.randomUUID();
     const expiry = new Date();
-    expiry.setDate(expiry.getDate() + 1); // 1 year expiry
+    expiry.setDate(expiry.getDate() + 365); // 1 year expiry
     document.cookie = `${cookieName}=${uuid}; path=/; expires=${expiry.toUTCString()}`;
     return uuid;
   }
@@ -90,13 +89,30 @@ js_code = """
 
 visitor_id = st_javascript(js_code=js_code)
 
+# Debugging
 if visitor_id:
+    st.write(f"Visitor ID: {visitor_id}")  # Log the visitor ID for debugging
+
+    # Fetch existing visitor IDs from the sheet
     existing_ids = sheet.col_values(1)  # Column A = visitor IDs
+    st.write(f"Existing IDs: {existing_ids}")  # Debug existing IDs
+
+    # Check if the visitor ID is already in the sheet
     if visitor_id not in existing_ids:
-        sheet.append_row([visitor_id, datetime.datetime.now().isoformat()])
-        st.info("✅ New visitor recorded.")
+        try:
+            sheet.append_row([visitor_id, datetime.datetime.now().isoformat()])
+            st.info("✅ New visitor recorded.")
+        except Exception as e:
+            st.error(f"Failed to append new visitor: {e}")  # Handle any errors during Google Sheets update
     else:
         st.info("👋 Returning visitor (cookie-based).")
+else:
+    st.error("No visitor ID found!")
+
+
+
+
+
 
 
 
