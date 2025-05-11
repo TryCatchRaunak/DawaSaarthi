@@ -1,7 +1,3 @@
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-
 import streamlit as st
 import os
 from PIL import Image
@@ -10,6 +6,10 @@ from dotenv import load_dotenv
 from crewai import Agent
 from crewai_tools import SerperDevTool
 from crewai_tools import FirecrawlSearchTool
+import sqlite3
+import uuid
+import datetime
+
 
 from crewai import LLM
 import litellm
@@ -21,10 +21,48 @@ from dotenv import load_dotenv
 from crewai_tools import FileWriterTool
 import streamlit as st
 load_dotenv()
+# --- VISITOR TRACKING ---
+conn = sqlite3.connect('visitors.db', check_same_thread=False)
+c = conn.cursor()
+
+# Create table for visitors
+c.execute('''
+    CREATE TABLE IF NOT EXISTS visitors (
+        session_id TEXT PRIMARY KEY,
+        visits INTEGER,
+        last_visit TEXT
+    )
+''')
+conn.commit()
+
 search_tool = SerperDevTool()
 
 
 model = genai.GenerativeModel('gemini-2.0-flash-001')
+
+
+# Assign a session ID to track unique/repeated visitors
+if 'session_id' not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
+
+session_id = st.session_state.session_id
+
+# Check if visitor exists
+c.execute('SELECT visits FROM visitors WHERE session_id = ?', (session_id,))
+row = c.fetchone()
+
+if row:
+    # Repeated visitor
+    visits = row[0] + 1
+    c.execute('UPDATE visitors SET visits = ?, last_visit = ? WHERE session_id = ?',
+            (visits, datetime.datetime.now().isoformat(), session_id))
+else:
+    # First-time visitor
+    c.execute('INSERT INTO visitors (session_id, visits, last_visit) VALUES (?, ?, ?)',
+            (session_id, 1, datetime.datetime.now().isoformat()))
+
+conn.commit()
+
 st.set_page_config(
     page_title="DawaSaarthi - Home Page"
 )
@@ -39,11 +77,6 @@ with st.sidebar:
     medicines=st.text_area("Medicines To Be Searched", height=100)
     generate_comparison_manual=st.button("Generate Output Manually", type="primary", use_container_width=True)  
 
-# Display uploaded image
-    
-        
-
-# Define functions
 # Prompts for AI
 medicine_prompt = """
 First recognize the medicine names written on the prescription and then check for spelling mistakes and give the correct existing medicine names in return in a comma seperated format.
@@ -73,9 +106,9 @@ def agents_workflow(uploaded_file,topic):
                 f"You are an expert in searching and finding direct purchase links for the list of medicines {medicine_name} from the authentic online pharmacies .Generate the links for all the medicines one by one and return them to the user."   
             ),
             backstory=(
-               "You're a seasoned researcher who goes out in the web to surf and find out the direct links to the medicines given and return them to the user for them to buy."
+            "You're a seasoned researcher who goes out in the web to surf and find out the direct links to the medicines given and return them to the user for them to buy."
             ),
-            tools=[search_tool],
+            tools=[search_tool,FirecrawlSearchTool()],
             verbose=True,
         )
 
@@ -88,15 +121,6 @@ def agents_workflow(uploaded_file,topic):
                 "You are a meticulous writer who writes down the links to the medicines that are required by the user and creates a report for them to buy the medicines from the link provided."
             ),
         )
-        # name_finder_task = Task(
-        #     description=(
-        #        f"Use the serper tool to google search for the list of medicines {med}.And then give their correct names if they are not clear and return them to the user."
-        #     ),
-        #     expected_output=(
-        #         "List of the correct names of the medicines that are required by the user if they are not clear."
-        #     ),
-        #     agent=name_find
-        #     )
 
         research_task = Task(
             description=(
@@ -115,30 +139,23 @@ def agents_workflow(uploaded_file,topic):
                 f"Accumulate all the links researched by the previous agent for the medicines {medicine_name} and create a report in a structured format.Give the output in hepyerlinked format not in html format"
             ),
             expected_output=(
-               "A report consisting the links to the medicines that are required by the user and the link to the page of the medicine purchase in a hyperlinked format."
-         
+            "A report consisting the links to the medicines that are required by the user and the link to the page of the medicine purchase in a hyperlinked format."
+        
             ),
             agent=reporting_analyst,
             output_file="Links.md",
-            tools=[search_tool]
+            tools=[search_tool,FirecrawlSearchTool()]
         )
 
         # Initialize and execute the Crew
         crew = Crew(
-
-
             agents=[
-                # name_finder,
-                # name_find,
                 researcher,
                 reporting_analyst
-
             ],
             tasks=[
-                # name_finder_task,
                 research_task,
                 reporting_task
-                
             ],
             process=Process.sequential,
             verbose=True,
@@ -154,7 +171,7 @@ def agents_workflow_manual():
                 f"You are an expert in searching and finding direct purchase links for the list of medicines {medicines} from the authentic online pharmacies .Generate the links for all the medicines one by one and return them to the user."   
             ),
             backstory=(
-               "You're a seasoned researcher who goes out in the web to surf and find out the direct links to the medicines given and return them to the user for them to buy."
+            "You're a seasoned researcher who goes out in the web to surf and find out the direct links to the medicines given and return them to the user for them to buy."
             ),
             tools=[search_tool],
             verbose=True,
@@ -169,15 +186,6 @@ def agents_workflow_manual():
                 "You are a meticulous writer who writes down the links to the medicines that are required by the user and creates a report for them to buy the medicines from the link provided."
             ),
         )
-        # name_finder_task = Task(
-        #     description=(
-        #        f"Use the serper tool to google search for the list of medicines {med}.And then give their correct names if they are not clear and return them to the user."
-        #     ),
-        #     expected_output=(
-        #         "List of the correct names of the medicines that are required by the user if they are not clear."
-        #     ),
-        #     agent=name_find
-        #     )
 
         research_task = Task(
             description=(
@@ -196,30 +204,22 @@ def agents_workflow_manual():
                 f"Accumulate all the links researched by the previous agent for the medicines and create a report in a structured format.Give the output in hepyerlinked format not in html format"
             ),
             expected_output=(
-               "A report consisting the links to the medicines that are required by the user and the link to the page of the medicine purchase in a hyperlinked format."
-         
+            "A report consisting the links to the medicines that are required by the user and the link to the page of the medicine purchase in a hyperlinked format."
+        
             ),
             agent=reporting_analyst,
             output_file="Links.md",
             tools=[search_tool]
         )
 
-        # Initialize and execute the Crew
         crew = Crew(
-
-
             agents=[
-                # name_finder,
-                # name_find,
                 researcher,
                 reporting_analyst
-
             ],
             tasks=[
-                # name_finder_task,
                 research_task,
                 reporting_task
-                
             ],
             process=Process.sequential,
             verbose=True,
@@ -228,18 +228,18 @@ def agents_workflow_manual():
         
         return final_report
 
-    # File uploader
-
-
-
-
-
-
 
 # Main App Layout
 st.title("DawaSaarthi")
 
+# Display visitor stats
+c.execute('SELECT COUNT(*) FROM visitors')
+unique_visitors = c.fetchone()[0]
 
+c.execute('SELECT SUM(visits) FROM visitors')
+total_visits = c.fetchone()[0]
+
+st.markdown(f"🧍 **Unique Visitors:** {unique_visitors}")
 if generate_comparison:
     with st.spinner("Listing Down Links... This may take a moment..."):
         try:
@@ -282,7 +282,6 @@ if generate_comparison_manual:
                         )
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
-
 
 st.markdown("-----------")
 st.markdown("Team Nexora")
