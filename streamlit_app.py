@@ -81,7 +81,7 @@ js_code = """
   } else {
     const uuid = self.crypto.randomUUID();
     const expiry = new Date();
-    expiry.setDate(expiry.getDate() + 365); // 1 year expiry
+    expiry.setDate(expiry.getDate() + 1); // 1 year expiry
     document.cookie = `${cookieName}=${uuid}; path=/; expires=${expiry.toUTCString()}`;
     return uuid;
   }
