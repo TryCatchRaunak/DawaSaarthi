@@ -21,17 +21,16 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gspread"], 
 client = gspread.authorize(creds)
 sheet = client.open("Dawasaarthi_Visitors").sheet1
 
-# Check if session cookie exists
+# Initialize session ID (using st.session_state to persist across sessions)
 if 'session_id' not in st.session_state:
-    # If no cookie exists, create a new session ID
+    # Create a new session ID and store in session state
     session_id = str(uuid.uuid4())
     st.session_state.session_id = session_id
-    # Append the new session to Google Sheets
+    # Add the new session ID to Google Sheets
     sheet.append_row([session_id, datetime.datetime.now().isoformat()])
 else:
-    # If cookie exists, use the existing session ID
     session_id = st.session_state.session_id
-    # Update last visit time in Google Sheets
+    # Update the session timestamp in Google Sheets (if the session ID already exists)
     cell = sheet.find(session_id)
     if cell:
         sheet.update_cell(cell.row, 2, datetime.datetime.now().isoformat())  # Update last visit timestamp
