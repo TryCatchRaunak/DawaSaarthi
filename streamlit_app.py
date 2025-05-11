@@ -71,7 +71,7 @@ def agents_workflow(uploaded_file, topic):
         backstory=(
             "You're a seasoned researcher who goes out in the web to surf and find out the direct links to the medicines given and return them to the user for them to buy."
         ),
-        tools=[search_tool, FirecrawlSearchTool()],
+        tools=[search_tool],
         verbose=True,
     )
 
@@ -106,7 +106,7 @@ def agents_workflow(uploaded_file, topic):
         ),
         agent=reporting_analyst,
         output_file="Links.md",
-        tools=[search_tool, FirecrawlSearchTool()],
+        tools=[search_tool],
     )
 
     # Initialize and execute the Crew
