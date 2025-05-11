@@ -272,8 +272,6 @@ unique_visitors = c.fetchone()[0]
 
 c.execute('SELECT SUM(visits) FROM visitors')
 total_visits = c.fetchone()[0]
-
-st.markdown(f"🧍 **Unique Visitors:** {unique_visitors}")
 if generate_comparison:
     with st.spinner("Listing Down Links... This may take a moment..."):
         try:
