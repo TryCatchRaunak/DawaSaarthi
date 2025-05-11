@@ -11,3 +11,4 @@ pytesseract
 firecrawl-py
 gspread
 oauth2client
+streamlit_javascript
