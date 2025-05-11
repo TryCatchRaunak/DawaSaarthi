@@ -45,61 +45,66 @@ sheet = client.open("Dawasaarthi_Visitors").sheet1
 import datetime
 import uuid
 
-session_id = str(uuid.uuid4())
-sheet.append_row([session_id, datetime.datetime.now().isoformat()])
 
-
-
-
-
-
-
-
-
-conn = sqlite3.connect('visitors.db', check_same_thread=False)
-c = conn.cursor()
-
-# Create table for visitors
-c.execute('''
-    CREATE TABLE IF NOT EXISTS visitors (
-        session_id TEXT PRIMARY KEY,
-        visits INTEGER,
-        last_visit TEXT
-    )
-''')
-conn.commit()
 
 search_tool = SerperDevTool()
 
 
 model = genai.GenerativeModel('gemini-2.0-flash-001')
 
-
-# Assign a session ID to track unique/repeated visitors
-if 'session_id' not in st.session_state:
-    st.session_state.session_id = str(uuid.uuid4())
-
-session_id = st.session_state.session_id
-
-# Check if visitor exists
-c.execute('SELECT visits FROM visitors WHERE session_id = ?', (session_id,))
-row = c.fetchone()
-
-if row:
-    # Repeated visitor
-    visits = row[0] + 1
-    c.execute('UPDATE visitors SET visits = ?, last_visit = ? WHERE session_id = ?',
-            (visits, datetime.datetime.now().isoformat(), session_id))
-else:
-    # First-time visitor
-    c.execute('INSERT INTO visitors (session_id, visits, last_visit) VALUES (?, ?, ?)',
-            (session_id, 1, datetime.datetime.now().isoformat()))
-
-conn.commit()
-
 st.set_page_config(
     page_title="DawaSaarthi - Home Page"
 )
+
+
+
+
+# --- Accurate Visitor Tracking using Cookie (Place right after st.set_page_config) ---
+from streamlit_javascript import st_javascript
+import datetime
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+# Setup Google Sheet
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gspread"], scope)
+client = gspread.authorize(creds)
+sheet = client.open("Dawasaarthi_Visitors").sheet1
+
+# JavaScript for persistent cookie-based visitor ID
+js_code = """
+(() => {
+  const cookieName = "visitor_id";
+  let value = document.cookie.match('(^|;)\\s*' + cookieName + '\\s*=\\s*([^;]+)');
+  if (value) {
+    return value.pop();
+  } else {
+    const uuid = self.crypto.randomUUID();
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + 365); // 1 year expiry
+    document.cookie = `${cookieName}=${uuid}; path=/; expires=${expiry.toUTCString()}`;
+    return uuid;
+  }
+})();
+"""
+
+visitor_id = st_javascript(js_code=js_code)
+
+if visitor_id:
+    existing_ids = sheet.col_values(1)  # Column A = visitor IDs
+    if visitor_id not in existing_ids:
+        sheet.append_row([visitor_id, datetime.datetime.now().isoformat()])
+        st.info("✅ New visitor recorded.")
+    else:
+        st.info("👋 Returning visitor (cookie-based).")
+
+
+
+
+
+
+
+
 with st.sidebar:
     st.title("Enquiry Booth")
     st.markdown("------")
@@ -266,12 +271,6 @@ def agents_workflow_manual():
 # Main App Layout
 st.title("DawaSaarthi")
 
-# Display visitor stats
-c.execute('SELECT COUNT(*) FROM visitors')
-unique_visitors = c.fetchone()[0]
-
-c.execute('SELECT SUM(visits) FROM visitors')
-total_visits = c.fetchone()[0]
 if generate_comparison:
     with st.spinner("Listing Down Links... This may take a moment..."):
         try:
