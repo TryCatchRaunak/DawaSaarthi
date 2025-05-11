@@ -49,9 +49,10 @@ js_code = """
 })();
 """
 
+# Extract the visitor_id using Javascript code
 visitor_id = st_javascript(js_code=js_code)
 
-# Process the visitor ID if it's found or not
+# Check if visitor_id is found or not
 if visitor_id:
     existing_ids = sheet.col_values(1)  # Column A = visitor IDs
     if visitor_id not in existing_ids:
@@ -60,8 +61,13 @@ if visitor_id:
     else:
         st.info("👋 Returning visitor (cookie-based).")
 else:
-    st.error("No visitor ID found!")
-
+    st.error("No visitor ID found! Please refresh your page and check your browser's cookies.")
+    st.warning("Try opening the developer tools (F12) in your browser to check the 'Cookies' section.")
+    st.markdown("### Troubleshooting Tips:")
+    st.markdown("- Ensure that your browser allows cookies.")
+    st.markdown("- Make sure the page is fully loaded before generating a visitor ID.")
+    st.markdown("- If you're using Incognito mode, cookies may not persist.")
+    
 # --- AI Model Setup ---
 model = genai.GenerativeModel('gemini-2.0-flash-001')
 
