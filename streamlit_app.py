@@ -26,6 +26,36 @@ from crewai_tools import FileWriterTool
 import streamlit as st
 load_dotenv()
 # --- VISITOR TRACKING ---
+
+
+
+
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import streamlit as st
+
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gspread"], scope)
+client = gspread.authorize(creds)
+
+# Access the Google Sheet
+sheet = client.open("DawaSaarthi_Visitors").sheet1
+
+# Example: Append new visitor
+import datetime
+import uuid
+
+session_id = str(uuid.uuid4())
+sheet.append_row([session_id, datetime.datetime.now().isoformat()])
+
+
+
+
+
+
+
+
+
 conn = sqlite3.connect('visitors.db', check_same_thread=False)
 c = conn.cursor()
 
